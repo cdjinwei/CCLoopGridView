@@ -5,6 +5,8 @@
 // Learn life-cycle callbacks:
 //  - https://docs.cocos.com/creator/manual/en/scripting/life-cycle-callbacks.html
 
+import LoopGridItem from "./LoopGridItem";
+
 const { ccclass, property } = cc._decorator;
 
 enum ListType {
@@ -31,7 +33,7 @@ enum DirectionGird {
 }
 
 @ccclass
-export default class NewClass extends cc.Component {
+export default class LoopGridView extends cc.Component {
 
     @property({
         type: cc.Float,
@@ -109,21 +111,20 @@ export default class NewClass extends cc.Component {
     })
     content: cc.Node;
 
-    itemDataList: Array<any> = new Array(50);
-    itemNodeList: any = {};
-    itemInflator: Function;
-    itemPool: cc.NodePool = new cc.NodePool();
+    private itemDataList: Array<any> = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20];
+    private itemNodeList: any = {};
+    private itemPool: cc.NodePool = new cc.NodePool();
 
-    leftLimit: number = 0;
-    rightLimit: number = 0;
-    topLimit: number = 0;
-    bottomLimit: number = 0;
+    private leftLimit: number = 0;
+    private rightLimit: number = 0;
+    private topLimit: number = 0;
+    private bottomLimit: number = 0;
 
-    startIndex: number = 0;
-    endIndex: number = 0;
-    visibleCount: number = 0;
-    rowCount: number = 0;
-    colCount: number = 0;
+    private startIndex: number = 0;
+    private endIndex: number = 0;
+    private visibleCount: number = 0;
+    private rowCount: number = 0;
+    private colCount: number = 0;
     // onLoad () {}
 
     start() {
@@ -141,19 +142,23 @@ export default class NewClass extends cc.Component {
         this.content.on(cc.Node.EventType.TOUCH_END, this.onTouchEnd, this);
     }
 
-    onTouchStart(event) {
+    onDestroy(){
+        this.itemPool.clear();
+    }
+
+    private onTouchStart(event) {
 
     }
 
-    onTouchMove(event: cc.Event.EventTouch) {
+    private onTouchMove(event: cc.Event.EventTouch) {
         this.onScroll(event);
     }
 
-    onTouchEnd(event) {
+    private onTouchEnd(event) {
 
     }
 
-    initItemNodes() {
+    private initItemNodes() {
         //创建this.visibleCount个item
         for (let i = 0; i < Math.min(this.visibleCount, this.itemDataList.length); i++) {
             let index = i + this.startIndex;
@@ -161,16 +166,31 @@ export default class NewClass extends cc.Component {
         }
     }
 
-    createItemNode(index) {
-        let newNode = cc.instantiate(this.itemTemplate);
+    private createItem(): cc.Node{
+        let item = this.itemPool.get();
+        if(item == undefined){
+            console.log("create new node");
+            item = cc.instantiate(this.itemTemplate);
+        }
+        return item;
+    }
+
+    private recycleItem(index: number){
+        this.itemPool.put(this.itemNodeList[index]);
+        delete this.itemNodeList[index];
+    }
+
+    private createItemNode(index) {
+        let newNode = this.createItem();
         newNode.parent = this.content;
         newNode.position = this.calcItemPosition(index);
         newNode.scale = 0;
+        newNode.getComponent(LoopGridItem).onRender(this.itemDataList[index]);
         cc.tween(newNode).to(0.15, { scale: 1 }).start();
         this.itemNodeList[index] = newNode;
     }
 
-    initViewInfo() {
+    private initViewInfo() {
         switch (this.listType) {
             case ListType.HORIZONTAL:
                 this.visibleCount = Math.ceil(this.node.width / (this.itemTemplate.data.width + this.horizontalGap)) + 1;
@@ -183,21 +203,34 @@ export default class NewClass extends cc.Component {
                 this.endIndex = this.startIndex + this.visibleCount - 1;
                 break;
             case ListType.GRID:
-                let contentWidth = this.content.width;
-                let contentHeight = this.content.height;
+                if(this.directionGrid == DirectionGird.LEFT_TO_RIGHT || this.directionGrid == DirectionGird.RIGHT_TO_LEFT){
+                    this.rowCount = Math.floor(this.node.height / (this.itemTemplate.data.height + this.verticalGap));
+                    //实际列数
+                    this.colCount = Math.ceil(this.itemDataList.length / this.rowCount);
+                    //可视列数
+                    let visibleCol = Math.ceil(this.node.width / (this.itemTemplate.data.width + this.horizontalGap)) + 1;
+                    //可视item数
+                    this.visibleCount = visibleCol * this.rowCount;
 
-                this.colCount = Math.floor(contentWidth / (this.itemTemplate.data.width + this.horizontalGap));
-                this.rowCount = Math.ceil(this.itemDataList.length / this.colCount);
+                    this.startIndex = 0;
+                    this.endIndex = this.startIndex + this.visibleCount - 1;
+                }else{
+                    this.colCount = Math.floor(this.node.width / (this.itemTemplate.data.width + this.horizontalGap));
+                    //实际行数
+                    this.rowCount = Math.ceil(this.itemDataList.length / this.colCount);
+                    //可视行数
+                    let visibleRow = Math.ceil(this.node.height / (this.itemTemplate.data.height + this.verticalGap)) + 1;
+                    //可视item数
+                    this.visibleCount = visibleRow * this.colCount;
 
-                let visibleRow = Math.ceil(contentHeight / (this.itemTemplate.data.height + this.verticalGap)) + 1;
-                this.visibleCount = visibleRow * this.colCount;
-                this.startIndex = 0;
-                this.endIndex = this.startIndex + this.visibleCount - 1;
+                    this.startIndex = 0;
+                    this.endIndex = this.startIndex + this.visibleCount - 1;
+                }
                 break;
         }
     }
 
-    initScrollDirection() {
+    private initScrollDirection() {
         if (this.listType == ListType.GRID) {
             if (this.directionGrid == DirectionGird.LEFT_TO_RIGHT) {
                 this.content.width = (this.itemDataList.length * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
@@ -227,7 +260,7 @@ export default class NewClass extends cc.Component {
                 this.bottomLimit = this.content.y;
                 this.topLimit = this.content.y + (this.content.height - this.node.height);
             } else if (this.directionGrid == DirectionGird.BOTTOM_TO_TOP) {
-                this.content.height = (this.itemDataList.length * (this.itemTemplate.data.height + this.verticalGap)) - this.verticalGap;
+                this.content.height = (this.rowCount * (this.itemTemplate.data.height + this.verticalGap)) - this.verticalGap;
                 this.content.anchorX = 0.5;
                 this.content.anchorY = 0;
                 this.content.x = 0;
@@ -280,12 +313,11 @@ export default class NewClass extends cc.Component {
         }
     }
 
-    initItemData(itemDataList: Array<any>, itemInflator: Function) {
+    public initItemData(itemDataList: Array<any>) {
         this.itemDataList = itemDataList;
-        this.itemInflator = itemInflator;
     }
 
-    insertItemData(itemData: any, index: number = 0) {
+    public insertItemData(itemData: any, index: number = 0) {
         //过程中不允许用户与ui交互
         //插入一条数据
         //1.找到插入的位置
@@ -296,7 +328,7 @@ export default class NewClass extends cc.Component {
         //5.完成插入
     }
 
-    deleteItemData(index: number = 0) {
+    public deleteItemData(index: number = 0) {
         //过程中不允许用户与ui交互
         //删除一条数据
         //1.找到删除的位置
@@ -306,16 +338,16 @@ export default class NewClass extends cc.Component {
         //4.1.如果上移的数据从虚拟数据变为可视数据，为其创建item
     }
 
-    updateItemData(itemData: any, index: number) {
+    public updateItemData(itemData: any, index: number) {
         //更新指定位置的数据及item
     }
 
-    getItemDataIndex(itemData: any): number {
+    public getItemDataIndex(itemData: any): number {
         let index = 0;
         return index;
     }
 
-    onScroll(event: cc.Event.EventTouch) {
+    private onScroll(event: cc.Event.EventTouch) {
         this.updateContentPosition(event);
 
         if (this.scrollCheckCD > 0) {
@@ -337,8 +369,7 @@ export default class NewClass extends cc.Component {
                     }
                 } else if (i > newEndIndex) {
                     if (this.itemNodeList[i] != undefined) {
-                        this.itemNodeList[i].destroy();
-                        delete this.itemNodeList[i];
+                        this.recycleItem(i);
                     }
                 }
             }
@@ -346,8 +377,7 @@ export default class NewClass extends cc.Component {
             for (let i = this.startIndex; i <= newEndIndex; i++) {
                 if (i < newStartIndex) {
                     if (this.itemNodeList[i] != undefined) {
-                        this.itemNodeList[i].destroy();
-                        delete this.itemNodeList[i];
+                        this.recycleItem(i);
                     }
                 } else if (i >= this.endIndex) {
                     if (this.itemNodeList[i] == undefined) {
@@ -360,7 +390,7 @@ export default class NewClass extends cc.Component {
         this.endIndex = newEndIndex;
     }
 
-    updateContentPosition(event: cc.Event.EventTouch) {
+    private updateContentPosition(event: cc.Event.EventTouch) {
         let delta = event.getDelta();
 
         switch (this.listType) {
@@ -376,7 +406,7 @@ export default class NewClass extends cc.Component {
         }
     }
 
-    updateVerticalContentPosition(delta: cc.Vec2) {
+    private updateVerticalContentPosition(delta: cc.Vec2) {
         let tempY = this.content.y + delta.y;
         tempY = Math.min(tempY, this.topLimit);
         tempY = Math.max(tempY, this.bottomLimit);
@@ -384,7 +414,7 @@ export default class NewClass extends cc.Component {
         this.content.y = tempY;
     }
 
-    updateHorizontalContentPosition(delta: cc.Vec2) {
+    private updateHorizontalContentPosition(delta: cc.Vec2) {
         let tempX = this.content.x + delta.x;
         tempX = Math.min(tempX, this.rightLimit);
         tempX = Math.max(tempX, this.leftLimit);
@@ -392,7 +422,7 @@ export default class NewClass extends cc.Component {
         this.content.x = tempX;
     }
 
-    updateGridContentPosition(delta: cc.Vec2) {
+    private updateGridContentPosition(delta: cc.Vec2) {
         if(this.directionGrid == DirectionGird.LEFT_TO_RIGHT || this.directionGrid == DirectionGird.RIGHT_TO_LEFT){
             this.updateHorizontalContentPosition(delta);
         }else{
@@ -400,7 +430,7 @@ export default class NewClass extends cc.Component {
         }
     }
 
-    calcIndex(): any {
+    private calcIndex(): any {
 
         let newStartIndex: number, newEndIndex: number;
 
@@ -414,6 +444,7 @@ export default class NewClass extends cc.Component {
                 }
                 let offsetX = Math.abs(originX - contentX);
                 newStartIndex = Math.floor(offsetX / (this.itemTemplate.data.width + this.horizontalGap));
+                //index从0开始
                 newEndIndex = newStartIndex + this.visibleCount - 1;
                 break;
             case ListType.VERTICAL:
@@ -425,22 +456,24 @@ export default class NewClass extends cc.Component {
                 }
                 let offsetY = Math.abs(originY - contentY);
                 newStartIndex = Math.floor(offsetY / (this.itemTemplate.data.height + this.verticalGap));
+                //index从0开始
                 newEndIndex = newStartIndex + this.visibleCount - 1;
                 break;
             case ListType.GRID:
-                // this.directionGrid
                 if (this.directionGrid == DirectionGird.TOP_TO_BOTTOM) {
                     let originY = this.bottomLimit;
                     let offsetY = Math.abs(originY - this.content.y);
                     let rowIndex = Math.floor(offsetY / (this.itemTemplate.data.height + this.verticalGap));
                     newStartIndex = rowIndex * this.colCount;
-                    newEndIndex = newStartIndex + this.visibleCount;
+                    //index从0开始
+                    newEndIndex = newStartIndex + this.visibleCount - 1;
                 } else if (this.directionGrid == DirectionGird.BOTTOM_TO_TOP) {
                     let originY = this.topLimit;
                     let offsetY = Math.abs(originY - this.content.y);
                     let rowIndex = Math.floor(offsetY / (this.itemTemplate.data.height + this.verticalGap));
                     newStartIndex = rowIndex * this.colCount;
-                    newEndIndex = newStartIndex + this.visibleCount;
+                    //index从0开始
+                    newEndIndex = newStartIndex + this.visibleCount - 1;
                 } else if (this.directionGrid == DirectionGird.LEFT_TO_RIGHT) {
 
                 } else if (this.directionGrid == DirectionGird.RIGHT_TO_LEFT) {
@@ -448,10 +481,14 @@ export default class NewClass extends cc.Component {
                 }
                 break;
         }
+
+        newStartIndex = newStartIndex >= 0 ? newStartIndex : 0;
+        newEndIndex = newEndIndex < this.itemDataList.length ? newEndIndex : this.itemDataList.length - 1;
+
         return { newStartIndex, newEndIndex };
     }
 
-    calcItemPosition(index): cc.Vec2 {
+    private calcItemPosition(index): cc.Vec2 {
         let position: cc.Vec2;
 
         switch (this.listType) {
@@ -469,7 +506,7 @@ export default class NewClass extends cc.Component {
         return position;
     }
 
-    calcHorizontalItemPosition(index: number): cc.Vec2 {
+    private calcHorizontalItemPosition(index: number): cc.Vec2 {
         let position: cc.Vec2;
         if (this.directionHorizontal == DirectionHorizontal.LEFT_TO_RIGHT) {
             position = new cc.Vec2(
@@ -486,7 +523,7 @@ export default class NewClass extends cc.Component {
         return position;
     }
 
-    calcVerticalItemPosition(index: number): cc.Vec2 {
+    private calcVerticalItemPosition(index: number): cc.Vec2 {
         let position: cc.Vec2;
         if (this.directionVertical == DirectionVertical.TOP_TO_BOTTOM) {
             position = new cc.Vec2(
@@ -502,26 +539,42 @@ export default class NewClass extends cc.Component {
         return position;
     }
 
-    calcGridItemPosition(index: number): cc.Vec2 {
+    private calcGridItemPosition(index: number): cc.Vec2 {
         let position: cc.Vec2;
         let row = Math.floor(index / this.colCount);
         let col = index % this.colCount;
         switch (this.directionGrid) {
             case DirectionGird.TOP_TO_BOTTOM:
-                let left = -this.content.width / 2;
-                let right = this.content.width / 2;
-                let cellWidth = this.content.width / this.colCount;
-
-                let _left = left + cellWidth * col;
-                let _right = left + cellWidth * (col + 1);
-
-
-                position = new cc.Vec2(
-                    (_left + _right) / 2,
-                    0 - (this.itemTemplate.data.height + this.verticalGap) * row - this.itemTemplate.data.height / 2
-                );
+                {
+                    let left = -this.content.width / 2;
+                    let right = this.content.width / 2;
+                    let cellWidth = this.content.width / this.colCount;
+    
+                    let _left = left + cellWidth * col;
+                    let _right = left + cellWidth * (col + 1);
+    
+    
+                    position = new cc.Vec2(
+                        (_left + _right) / 2,
+                        0 - (this.itemTemplate.data.height + this.verticalGap) * row - this.itemTemplate.data.height / 2
+                    );
+                }
                 break;
             case DirectionGird.BOTTOM_TO_TOP:
+                {
+                    let left = -this.content.width / 2;
+                    let right = this.content.width / 2;
+                    let cellWidth = this.content.width / this.colCount;
+    
+                    let _left = left + cellWidth * col;
+                    let _right = left + cellWidth * (col + 1);
+    
+    
+                    position = new cc.Vec2(
+                        (_left + _right) / 2,
+                        (this.itemTemplate.data.height + this.verticalGap) * row + this.itemTemplate.data.height / 2
+                    );
+                }
                 break;
             case DirectionGird.LEFT_TO_RIGHT:
                 break;
