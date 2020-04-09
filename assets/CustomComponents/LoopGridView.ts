@@ -111,7 +111,7 @@ export default class LoopGridView extends cc.Component {
     })
     content: cc.Node;
 
-    private itemDataList: Array<any> = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20];
+    private itemDataList: Array<any>;
     private itemNodeList: any = {};
     private itemPool: cc.NodePool = new cc.NodePool();
 
@@ -125,57 +125,62 @@ export default class LoopGridView extends cc.Component {
     private visibleCount: number = 0;
     private rowCount: number = 0;
     private colCount: number = 0;
-    // onLoad () {}
+
+    private interactable: boolean = true;
+    onLoad() {
+        console.log('onLoad');
+    }
+
+    onEnable() {
+        console.log('onEanable');
+    }
 
     start() {
+        console.log('start');
         if (this.itemTemplate == undefined) {
             console.error('itemTemplate can not be null!');
             return;
         }
-
-        this.initViewInfo();
-        this.initScrollDirection();
-        this.initItemNodes();
 
         this.content.on(cc.Node.EventType.TOUCH_START, this.onTouchStart, this);
         this.content.on(cc.Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
         this.content.on(cc.Node.EventType.TOUCH_END, this.onTouchEnd, this);
     }
 
-    onDestroy(){
+    onDestroy() {
         this.itemPool.clear();
     }
 
     private onTouchStart(event) {
-
+        if(!this.interactable) return;
     }
 
     private onTouchMove(event: cc.Event.EventTouch) {
+        if(!this.interactable) return;
         this.onScroll(event);
     }
 
     private onTouchEnd(event) {
-
+        if(!this.interactable) return;
     }
 
     private initItemNodes() {
-        //创建this.visibleCount个item
         for (let i = 0; i < Math.min(this.visibleCount, this.itemDataList.length); i++) {
             let index = i + this.startIndex;
             this.createItemNode(index);
         }
     }
 
-    private createItem(): cc.Node{
+    private createItem(): cc.Node {
         let item = this.itemPool.get();
-        if(item == undefined){
+        if (item == undefined) {
             console.log("create new node");
             item = cc.instantiate(this.itemTemplate);
         }
         return item;
     }
 
-    private recycleItem(index: number){
+    private recycleItem(index: number) {
         this.itemPool.put(this.itemNodeList[index]);
         delete this.itemNodeList[index];
     }
@@ -185,9 +190,10 @@ export default class LoopGridView extends cc.Component {
         newNode.parent = this.content;
         newNode.position = this.calcItemPosition(index);
         newNode.scale = 0;
-        newNode.getComponent(LoopGridItem).onRender(this.itemDataList[index]);
-        cc.tween(newNode).to(0.15, { scale: 1 }).start();
         this.itemNodeList[index] = newNode;
+        let cmp = newNode.getComponent(LoopGridItem);
+        cmp.onRender(this.itemDataList[index]);
+        cmp.runShowAnim();
     }
 
     private initViewInfo() {
@@ -203,7 +209,7 @@ export default class LoopGridView extends cc.Component {
                 this.endIndex = this.startIndex + this.visibleCount - 1;
                 break;
             case ListType.GRID:
-                if(this.directionGrid == DirectionGird.LEFT_TO_RIGHT || this.directionGrid == DirectionGird.RIGHT_TO_LEFT){
+                if (this.directionGrid == DirectionGird.LEFT_TO_RIGHT || this.directionGrid == DirectionGird.RIGHT_TO_LEFT) {
                     this.rowCount = Math.floor(this.node.height / (this.itemTemplate.data.height + this.verticalGap));
                     //实际列数
                     this.colCount = Math.ceil(this.itemDataList.length / this.rowCount);
@@ -214,7 +220,7 @@ export default class LoopGridView extends cc.Component {
 
                     this.startIndex = 0;
                     this.endIndex = this.startIndex + this.visibleCount - 1;
-                }else{
+                } else {
                     this.colCount = Math.floor(this.node.width / (this.itemTemplate.data.width + this.horizontalGap));
                     //实际行数
                     this.rowCount = Math.ceil(this.itemDataList.length / this.colCount);
@@ -313,12 +319,59 @@ export default class LoopGridView extends cc.Component {
         }
     }
 
+    private refreshContentSize() {
+        if (this.listType == ListType.GRID) {
+            if (this.directionGrid == DirectionGird.LEFT_TO_RIGHT) {
+                this.content.width = (this.itemDataList.length * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
+                this.leftLimit = this.content.x - (this.content.width - this.node.width);
+                this.rightLimit = this.content.x;
+            } else if (this.directionGrid == DirectionGird.RIGHT_TO_LEFT) {
+                this.content.width = (this.itemDataList.length * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
+                this.leftLimit = this.content.x;
+                this.rightLimit = this.content.x + (this.content.width - this.node.width);
+            } else if (this.directionGrid == DirectionGird.TOP_TO_BOTTOM) {
+                this.content.height = (this.rowCount * (this.itemTemplate.data.height + this.verticalGap)) - this.verticalGap;
+                this.bottomLimit = this.content.y;
+                this.topLimit = this.content.y + (this.content.height - this.node.height);
+            } else if (this.directionGrid == DirectionGird.BOTTOM_TO_TOP) {
+                this.content.height = (this.rowCount * (this.itemTemplate.data.height + this.verticalGap)) - this.verticalGap;
+                this.bottomLimit = this.content.y - (this.content.height - this.node.height);
+                this.topLimit = this.content.y;
+            }
+        } else if (this.listType == ListType.HORIZONTAL) {
+            this.content.width = (this.itemDataList.length * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
+            if (this.directionHorizontal == DirectionHorizontal.LEFT_TO_RIGHT) {
+                this.leftLimit = this.content.x - (this.content.width - this.node.width);
+                this.rightLimit = this.content.x;
+            } else {
+                this.leftLimit = this.content.x;
+                this.rightLimit = this.content.x + (this.content.width - this.node.width);
+            }
+
+        } else if (this.listType == ListType.VERTICAL) {
+            this.content.height = (this.itemDataList.length * (this.itemTemplate.data.height + this.verticalGap)) - this.verticalGap;
+
+            if (this.directionVertical == DirectionVertical.TOP_TO_BOTTOM) {
+                this.bottomLimit = this.content.y;
+                this.topLimit = this.content.y + (this.content.height - this.node.height);
+            } else {
+                this.bottomLimit = this.content.y - (this.content.height - this.node.height);
+                this.topLimit = this.content.y;
+            }
+        }
+    }
+
     public initItemData(itemDataList: Array<any>) {
         this.itemDataList = itemDataList;
+
+        this.initViewInfo();
+        this.initScrollDirection();
+        this.initItemNodes();
     }
 
     public insertItemData(itemData: any, index: number = 0) {
         //过程中不允许用户与ui交互
+        this.interactable = false;
         //插入一条数据
         //1.找到插入的位置
         //2.将插入位置以及位置以下的item‘向下’移动一个item的距离
@@ -329,22 +382,54 @@ export default class LoopGridView extends cc.Component {
     }
 
     public deleteItemData(index: number = 0) {
-        //过程中不允许用户与ui交互
-        //删除一条数据
-        //1.找到删除的位置
-        //2.将该位置数据删除
+        let deleteItem: cc.Node = this.itemNodeList[index];
+        this.itemDataList.splice(index, 1);
+        if(deleteItem == undefined){
+            return;
+        }
+        this.interactable = false;
+
+        let cmp: LoopGridItem = deleteItem.getComponent(LoopGridItem);
+        cmp.runDeleteAnim(() => {
+            this.interactable = true;
+            deleteItem.destroy();
+            delete this.itemNodeList[index];
+            for(let i = index + 1; i < this.itemDataList.length; i++){
+                let item = this.itemNodeList[i];
+
+                if(item == undefined) break;
+                let newIndex = i - 1;
+                this.itemNodeList[newIndex] = item;
+                delete this.itemNodeList[i];
+                cc.tween(item).to(0.15, {position: this.calcItemPosition(newIndex)}).start();
+            }
+        });
+
         //3.播放删除动画，并移除掉item
         //4.将该位置以下的item‘向上’移动一个item的距离
         //4.1.如果上移的数据从虚拟数据变为可视数据，为其创建item
+
+        //1.删除节点
+        //2.移动节点补位
+        //3.更新content长度
     }
 
-    public updateItemData(itemData: any, index: number) {
-        //更新指定位置的数据及item
+    public updateItemData(index: number, itemData: any) {
+        if (index < 0 || index >= this.itemDataList.length) {
+            console.warn(`index: ${index} out of range`);
+            return;
+        }
+
+        this.itemDataList[index] = itemData;
+        
+        if(this.itemNodeList[index] != undefined){
+            let cmp: LoopGridItem = this.itemNodeList[index].getComponent(LoopGridItem);
+            cmp.onRender(itemData);
+        }
     }
 
-    public getItemDataIndex(itemData: any): number {
-        let index = 0;
-        return index;
+    public findItemDataIndex(): number {
+        return 1;
     }
 
     private onScroll(event: cc.Event.EventTouch) {
@@ -357,6 +442,10 @@ export default class LoopGridView extends cc.Component {
             this.scrollCheckCD = this.scrollCheckDt;
         }
 
+        this.refreshView();
+    }
+
+    private refreshView() {
         let { newStartIndex, newEndIndex } = this.calcIndex();
         if (this.startIndex == newStartIndex) return;
 
@@ -423,9 +512,9 @@ export default class LoopGridView extends cc.Component {
     }
 
     private updateGridContentPosition(delta: cc.Vec2) {
-        if(this.directionGrid == DirectionGird.LEFT_TO_RIGHT || this.directionGrid == DirectionGird.RIGHT_TO_LEFT){
+        if (this.directionGrid == DirectionGird.LEFT_TO_RIGHT || this.directionGrid == DirectionGird.RIGHT_TO_LEFT) {
             this.updateHorizontalContentPosition(delta);
-        }else{
+        } else {
             this.updateVerticalContentPosition(delta);
         }
     }
@@ -549,11 +638,11 @@ export default class LoopGridView extends cc.Component {
                     let left = -this.content.width / 2;
                     let right = this.content.width / 2;
                     let cellWidth = this.content.width / this.colCount;
-    
+
                     let _left = left + cellWidth * col;
                     let _right = left + cellWidth * (col + 1);
-    
-    
+
+
                     position = new cc.Vec2(
                         (_left + _right) / 2,
                         0 - (this.itemTemplate.data.height + this.verticalGap) * row - this.itemTemplate.data.height / 2
@@ -565,11 +654,11 @@ export default class LoopGridView extends cc.Component {
                     let left = -this.content.width / 2;
                     let right = this.content.width / 2;
                     let cellWidth = this.content.width / this.colCount;
-    
+
                     let _left = left + cellWidth * col;
                     let _right = left + cellWidth * (col + 1);
-    
-    
+
+
                     position = new cc.Vec2(
                         (_left + _right) / 2,
                         (this.itemTemplate.data.height + this.verticalGap) * row + this.itemTemplate.data.height / 2

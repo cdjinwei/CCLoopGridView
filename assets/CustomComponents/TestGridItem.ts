@@ -5,7 +5,7 @@
 // Learn life-cycle callbacks:
 //  - https://docs.cocos.com/creator/manual/en/scripting/life-cycle-callbacks.html
 
-const {ccclass, property} = cc._decorator;
+const { ccclass, property } = cc._decorator;
 import LoopGridItem from "./LoopGridItem";
 
 
@@ -19,7 +19,7 @@ export default class TestGridItem extends LoopGridItem {
     })
     label: cc.Label;
 
-    start () {
+    start() {
 
     }
 
@@ -27,5 +27,13 @@ export default class TestGridItem extends LoopGridItem {
         this.label.string = itemData;
     }
 
+    runShowAnim(): void {
+        cc.tween(this.node).to(0.15, { scale: 1 }).start();
+    }
+
+    runDeleteAnim(callback: Function): void {
+        cc.tween(this.node).to(0.15, { scale: 0.1 }).call(callback).start();
+        // callback();
+    }
     // update (dt) {}
 }

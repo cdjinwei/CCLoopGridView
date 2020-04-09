@@ -9,7 +9,6 @@ const {ccclass, property} = cc._decorator;
 
 @ccclass
 export default abstract class LoopGridItem extends cc.Component {
-
     // LIFE-CYCLE CALLBACKS:
 
     // onLoad () {}
@@ -19,5 +18,7 @@ export default abstract class LoopGridItem extends cc.Component {
     }
 
     abstract onRender(itemData: any): void
+    abstract runShowAnim(): void
+    abstract runDeleteAnim(finishCallback: Function): void
     // update (dt) {}
 }
