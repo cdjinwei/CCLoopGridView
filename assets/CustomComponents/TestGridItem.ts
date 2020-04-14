@@ -33,7 +33,6 @@ export default class TestGridItem extends LoopGridItem {
 
     runDeleteAnim(callback: Function): void {
         cc.tween(this.node).to(0.15, { scale: 0.1 }).call(callback).start();
-        // callback();
     }
     // update (dt) {}
 }
