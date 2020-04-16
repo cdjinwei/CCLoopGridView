@@ -35,7 +35,7 @@ export default class NewClass extends cc.Component {
     // onLoad () {}
 
     start () {
-        let list = new Array(20);
+        let list = new Array(5);
         for(let i = 0; i < list.length; i++){
             list[i] = i;
         }
@@ -47,7 +47,7 @@ export default class NewClass extends cc.Component {
     }
 
     deleteData(event: cc.Event.EventTouch) {
-        this.loopGridView.deleteItemData(parseInt(this.deleteEditBox.string));
+        this.loopGridView.deleteItem(parseInt(this.deleteEditBox.string));
     }
     // update (dt) {}
 }

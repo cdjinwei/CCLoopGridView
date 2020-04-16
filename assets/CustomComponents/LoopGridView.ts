@@ -111,6 +111,12 @@ export default class LoopGridView extends cc.Component {
     })
     content: cc.Node;
 
+    @property({
+        type: cc.Boolean,
+        tooltip: '在增删节点的时候是否瞬间改变位置'
+    })
+    instantChangePosition: boolean = true;
+
     private itemDataList: Array<any>;
     private itemNodeList: any = {};
     private itemPool: cc.NodePool = new cc.NodePool();
@@ -153,16 +159,16 @@ export default class LoopGridView extends cc.Component {
     }
 
     private onTouchStart(event) {
-        if(!this.interactable) return;
+        if (!this.interactable) return;
     }
 
     private onTouchMove(event: cc.Event.EventTouch) {
-        if(!this.interactable) return;
+        if (!this.interactable) return;
         this.onScroll(event);
     }
 
     private onTouchEnd(event) {
-        if(!this.interactable) return;
+        if (!this.interactable) return;
     }
 
     private initItemNodes() {
@@ -237,84 +243,53 @@ export default class LoopGridView extends cc.Component {
         }
     }
 
-    private initViewSizeInfo() {
+    private initViewAnchor() {
         if (this.listType == ListType.GRID) {
             if (this.directionGrid == DirectionGird.LEFT_TO_RIGHT) {
-                this.content.width = (this.itemDataList.length * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
                 this.content.anchorX = 0;
                 this.content.anchorY = 0.5;
                 this.content.x = -this.node.width / 2;
                 this.content.y = 0;
-
-                this.leftLimit = this.content.x - (this.content.width - this.node.width);
-                this.rightLimit = this.content.x;
             } else if (this.directionGrid == DirectionGird.RIGHT_TO_LEFT) {
-                this.content.width = (this.itemDataList.length * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
                 this.content.anchorX = 1;
                 this.content.anchorY = 0.5;
                 this.content.x = this.node.width / 2;
                 this.content.y = 0;
-
-                this.leftLimit = this.content.x;
-                this.rightLimit = this.content.x + (this.content.width - this.node.width);
             } else if (this.directionGrid == DirectionGird.TOP_TO_BOTTOM) {
-                this.content.height = (this.rowCount * (this.itemTemplate.data.height + this.verticalGap)) - this.verticalGap;
                 this.content.anchorX = 0.5;
                 this.content.anchorY = 1;
                 this.content.x = 0;
                 this.content.y = this.node.height / 2;
-
-                this.bottomLimit = this.content.y;
-                this.topLimit = this.content.y + (this.content.height - this.node.height);
             } else if (this.directionGrid == DirectionGird.BOTTOM_TO_TOP) {
-                this.content.height = (this.rowCount * (this.itemTemplate.data.height + this.verticalGap)) - this.verticalGap;
                 this.content.anchorX = 0.5;
                 this.content.anchorY = 0;
                 this.content.x = 0;
                 this.content.y = -this.node.height / 2;
-
-                this.bottomLimit = this.content.y - (this.content.height - this.node.height);
-                this.topLimit = this.content.y;
             }
         } else if (this.listType == ListType.HORIZONTAL) {
-            this.content.width = (this.itemDataList.length * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
             if (this.directionHorizontal == DirectionHorizontal.LEFT_TO_RIGHT) {
                 this.content.anchorX = 0;
                 this.content.anchorY = 0.5;
                 this.content.x = -this.node.width / 2;
                 this.content.y = 0;
-
-                this.leftLimit = this.content.x - (this.content.width - this.node.width);
-                this.rightLimit = this.content.x;
             } else {
                 this.content.anchorX = 1;
                 this.content.anchorY = 0.5;
                 this.content.x = this.node.width / 2;
                 this.content.y = 0;
-
-                this.leftLimit = this.content.x;
-                this.rightLimit = this.content.x + (this.content.width - this.node.width);
             }
 
         } else if (this.listType == ListType.VERTICAL) {
-            this.content.height = (this.itemDataList.length * (this.itemTemplate.data.height + this.verticalGap)) - this.verticalGap;
-
             if (this.directionVertical == DirectionVertical.TOP_TO_BOTTOM) {
                 this.content.anchorX = 0.5;
                 this.content.anchorY = 1;
                 this.content.x = 0;
                 this.content.y = this.node.height / 2;
-
-                this.bottomLimit = this.content.y;
-                this.topLimit = this.content.y + (this.content.height - this.node.height);
             } else {
                 this.content.anchorX = 0.5;
                 this.content.anchorY = 0;
                 this.content.x = 0;
                 this.content.y = -this.node.height / 2;
-
-                this.bottomLimit = this.content.y - (this.content.height - this.node.height);
-                this.topLimit = this.content.y;
             }
 
         }
@@ -323,18 +298,50 @@ export default class LoopGridView extends cc.Component {
     private refreshContentSize() {
         if (this.listType == ListType.GRID) {
             if (this.directionGrid == DirectionGird.LEFT_TO_RIGHT) {
-                this.content.width = (this.itemDataList.length * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
+                this.colCount = Math.ceil(this.itemDataList.length / this.rowCount);
+                this.content.width = (this.colCount * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
+
+                this.leftLimit = this.node.width / 2 + this.content.width;
+                this.rightLimit = -this.node.width / 2;
             } else if (this.directionGrid == DirectionGird.RIGHT_TO_LEFT) {
-                this.content.width = (this.itemDataList.length * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
+                this.colCount = Math.ceil(this.itemDataList.length / this.rowCount);
+                this.content.width = (this.colCount * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
+
+                this.leftLimit = this.node.width / 2;
+                this.rightLimit = this.content.width - this.node.width / 2;
             } else if (this.directionGrid == DirectionGird.TOP_TO_BOTTOM) {
+                this.rowCount = Math.ceil(this.itemDataList.length / this.colCount);
                 this.content.height = (this.rowCount * (this.itemTemplate.data.height + this.verticalGap)) - this.verticalGap;
+
+                this.bottomLimit = this.node.height / 2;
+                this.topLimit = this.content.height - this.node.height / 2;
             } else if (this.directionGrid == DirectionGird.BOTTOM_TO_TOP) {
+                this.rowCount = Math.ceil(this.itemDataList.length / this.colCount);
                 this.content.height = (this.rowCount * (this.itemTemplate.data.height + this.verticalGap)) - this.verticalGap;
+
+                this.bottomLimit = this.node.height / 2 - this.content.height;
+                this.topLimit = -this.node.height / 2;
             }
         } else if (this.listType == ListType.HORIZONTAL) {
             this.content.width = (this.itemDataList.length * (this.itemTemplate.data.width + this.horizontalGap)) - this.horizontalGap;
+
+            if (this.directionHorizontal == DirectionHorizontal.LEFT_TO_RIGHT) {
+                this.leftLimit = this.node.width / 2 - this.content.width;
+                this.rightLimit = -this.node.width / 2;
+            } else {
+                this.leftLimit = this.node.width / 2;
+                this.rightLimit = this.content.width - this.node.width / 2;
+            }
         } else if (this.listType == ListType.VERTICAL) {
             this.content.height = (this.itemDataList.length * (this.itemTemplate.data.height + this.verticalGap)) - this.verticalGap;
+
+            if (this.directionVertical == DirectionVertical.TOP_TO_BOTTOM) {
+                this.bottomLimit = this.node.height / 2;
+                this.topLimit = this.content.height - this.node.height / 2;
+            } else {
+                this.bottomLimit = this.node.height / 2 - this.content.height;
+                this.topLimit = -this.node.height / 2;
+            }
         }
     }
 
@@ -342,7 +349,8 @@ export default class LoopGridView extends cc.Component {
         this.itemDataList = itemDataList;
 
         this.initViewInfo();
-        this.initViewSizeInfo();
+        this.initViewAnchor();
+        this.refreshContentSize();
         this.initItemNodes();
     }
 
@@ -358,31 +366,125 @@ export default class LoopGridView extends cc.Component {
         //5.完成插入
     }
 
+    public deleteItem(index: number = 0) {
+        if (index < 0 || index >= this.itemDataList.length) {
+            console.warn(`index: ${index} out of range!!!`);
+            return;
+        }
+
+        this.itemDataList.splice(index, 1);
+        this.refreshContentSize();
+
+        if (index < this.startIndex) {
+            this.updateContentPosition(new cc.Vec2(0, -(this.itemTemplate.data.height + this.verticalGap)));
+            for (let i = this.startIndex; i <= this.endIndex; i++) {
+                this.itemNodeList[i - 1] = this.itemNodeList[i];
+            }
+            delete this.itemNodeList[this.endIndex];
+            this.startIndex--;
+            this.endIndex--;
+
+            for (let index in this.itemNodeList) {
+                let node: cc.Node = this.itemNodeList[index];
+                if (node == undefined) continue;
+                cc.tween(node).to(0.15, {position: this.calcItemPosition(parseInt(index))}).start();
+            }
+            this.fixItemNode();
+        } else if (index > this.endIndex) {
+
+        } else {
+            this.updateContentPosition(new cc.Vec2(0, (this.itemTemplate.data.height + this.verticalGap)));
+            let itemNode: cc.Node = this.itemNodeList[index];
+            delete this.itemNodeList[index];
+
+            itemNode.getComponent(LoopGridItem).runDeleteAnim(() => {
+                itemNode.destroy();
+                for(let i = index + 1; i <= this.endIndex; i++){
+                    this.itemNodeList[i - 1] = this.itemNodeList[i];
+                }
+                delete this.itemNodeList[this.endIndex];
+                this.endIndex--;
+                if(this.visibleCount < this.itemDataList.length){
+                    this.startIndex--;
+                }else{
+                    this.startIndex = 0;
+                }
+                for (let index in this.itemNodeList) {
+                    let node: cc.Node = this.itemNodeList[index];
+                    if (node == undefined) continue;
+                    cc.tween(node).to(0.15, {position: this.calcItemPosition(parseInt(index))}).start();
+                }
+                this.fixItemNode();
+                //更新endIndex;
+            });
+        }
+
+        
+        // if (index < this.startIndex) {
+        //     for (let i = this.startIndex; i <= this.endIndex; i++) {
+        //         this.itemNodeList[i - 1] = this.itemNodeList[i];
+        //     }
+        //     delete this.itemNodeList[this.endIndex];
+        //     this.startIndex--;
+        //     this.endIndex--;
+        // } else if (index > this.endIndex) {
+
+        // } else {
+        //     this.itemNodeList[index].getComponent(LoopGridItem).runDeleteAnim(() => {
+        //         this.itemNodeList[index].destroy();
+        //         for (let i = index; i < this.endIndex; i++) {
+        //             this.itemNodeList[i] = this.itemNodeList[i + 1];
+        //         }
+        //         delete this.itemNodeList[this.endIndex];
+        //         this.fixItemNode();
+        //     });
+        // }
+
+        // //将item移动到对应位置
+        // for (let index in this.itemNodeList) {
+        //     let node: cc.Node = this.itemNodeList[index];
+        //     if (node == undefined) continue;
+        //     // cc.tween(node).to(0.15, { position: this.calcItemPosition(parseInt(index)) }).start();
+        //     let position = this.calcItemPosition(parseInt(index));
+        //     console.log(position.y);
+        //     node.position = position;
+        // }
+        // //修正content 位置
+        // this.fixContentPosition();
+    }
+
     public deleteItemData(index: number = 0) {
+        if (index < 0 || index >= this.itemDataList.length) {
+            console.warn(`index: ${index} out of range!!!`);
+            return;
+        }
         let deleteItem: cc.Node = this.itemNodeList[index];
         this.itemDataList.splice(index, 1);
         this.refreshContentSize();
-        this.refreshView();
-        // if(deleteItem == undefined){
-        //     return;
-        // }
-        // this.interactable = false;
+        if (deleteItem == undefined) {
+            return;
+        }
+        this.interactable = false;
 
-        // let cmp: LoopGridItem = deleteItem.getComponent(LoopGridItem);
-        // cmp.runDeleteAnim(() => {
-        //     this.interactable = true;
-        //     deleteItem.destroy();
-        //     delete this.itemNodeList[index];
-        //     for(let i = index + 1; i < this.itemDataList.length; i++){
-        //         let item = this.itemNodeList[i];
+        let cmp: LoopGridItem = deleteItem.getComponent(LoopGridItem);
 
-        //         if(item == undefined) break;
-        //         let newIndex = i - 1;
-        //         this.itemNodeList[newIndex] = item;
-        //         delete this.itemNodeList[i];
-        //         cc.tween(item).to(0.15, {position: this.calcItemPosition(newIndex)}).start();
-        //     }
-        // });
+        let onAnimFinished = () => {
+            this.interactable = true;
+            deleteItem.destroy();
+            delete this.itemNodeList[index];
+            for (let i = index + 1; i < this.itemDataList.length; i++) {
+                let item = this.itemNodeList[i];
+
+                if (item == undefined) break;
+                let newIndex = i - 1;
+                this.itemNodeList[newIndex] = item;
+                delete this.itemNodeList[i];
+                cc.tween(item).to(0.15, { position: this.calcItemPosition(newIndex) }).start();
+            }
+
+            this.fixItemNode();
+        }
+        cmp.runDeleteAnim(onAnimFinished);
 
         //1.被删除的数据在可视区域'上方'
         //1.1 将数据从itemDataList中删除
@@ -392,6 +494,14 @@ export default class LoopGridView extends cc.Component {
         //3.被删除的数据在可视区域'下方'
     }
 
+    private fixItemNode() {
+        for (let i = this.startIndex; i <= this.endIndex; i++) {
+            if (this.itemNodeList[i] == undefined) {
+                this.createItemNode(i);
+            }
+        }
+    }
+
     public updateItemData(index: number, itemData: any) {
         if (index < 0 || index >= this.itemDataList.length) {
             console.warn(`index: ${index} out of range`);
@@ -399,8 +509,8 @@ export default class LoopGridView extends cc.Component {
         }
 
         this.itemDataList[index] = itemData;
-        
-        if(this.itemNodeList[index] != undefined){
+
+        if (this.itemNodeList[index] != undefined) {
             let cmp: LoopGridItem = this.itemNodeList[index].getComponent(LoopGridItem);
             cmp.onRender(itemData);
         }
@@ -411,7 +521,7 @@ export default class LoopGridView extends cc.Component {
     }
 
     private onScroll(event: cc.Event.EventTouch) {
-        this.updateContentPosition(event);
+        this.updateContentPosition(event.getDelta());
 
         //控制刷新频率
         if (this.scrollCheckCD > 0) {
@@ -439,7 +549,7 @@ export default class LoopGridView extends cc.Component {
                     if (this.itemNodeList[i] != undefined) {
                         this.recycleItem(i);
                     }
-                } else if(this.dirty) {
+                } else if (this.dirty) {
                     this.itemNodeList[i].position = this.calcItemPosition(i);
                 }
             }
@@ -453,7 +563,7 @@ export default class LoopGridView extends cc.Component {
                     if (this.itemNodeList[i] == undefined) {
                         this.createItemNode(i);
                     }
-                } else if(this.dirty){
+                } else if (this.dirty) {
                     this.itemNodeList[i].position = this.calcItemPosition(i);
                 }
             }
@@ -463,8 +573,7 @@ export default class LoopGridView extends cc.Component {
         this.dirty = false;
     }
 
-    private updateContentPosition(event: cc.Event.EventTouch) {
-        let delta = event.getDelta();
+    private updateContentPosition(delta: cc.Vec2) {
 
         switch (this.listType) {
             case ListType.HORIZONTAL:
@@ -483,6 +592,14 @@ export default class LoopGridView extends cc.Component {
         let tempY = this.content.y + delta.y;
         tempY = Math.min(tempY, this.topLimit);
         tempY = Math.max(tempY, this.bottomLimit);
+
+        if(this.topLimit < this.bottomLimit){
+            if(this.directionVertical == DirectionVertical.BOTTOM_TO_TOP){
+                tempY = this.topLimit;
+            }else{
+                tempY = this.bottomLimit; 
+            }
+        }
 
         this.content.y = tempY;
     }
@@ -656,5 +773,43 @@ export default class LoopGridView extends cc.Component {
         }
 
         return position;
+    }
+
+    private fixContentPosition() {
+        switch (this.listType) {
+            case ListType.HORIZONTAL:
+                this.fixHorizontalContentPosition();
+                break;
+            case ListType.VERTICAL:
+                this.fixVerticalContentPosition();
+                break;
+            case ListType.GRID:
+                this.fixGridContentPosition();
+                break;
+        }
+    }
+
+    private fixHorizontalContentPosition() {
+        let tempX = this.content.x;
+        tempX = Math.min(tempX, this.rightLimit);
+        tempX = Math.max(tempX, this.leftLimit);
+
+        cc.tween(this.content).to(0.15, { x: tempX }).start();
+    }
+
+    private fixVerticalContentPosition() {
+        let tempY = this.content.y;
+        tempY = Math.min(tempY, this.topLimit);
+        tempY = Math.max(tempY, this.bottomLimit);
+
+        cc.tween(this.content).to(0.15, { y: tempY }).start();
+    }
+
+    private fixGridContentPosition() {
+        if (this.directionGrid == DirectionGird.LEFT_TO_RIGHT || this.directionGrid == DirectionGird.RIGHT_TO_LEFT) {
+            this.fixHorizontalContentPosition();
+        } else {
+            this.fixVerticalContentPosition();
+        }
     }
 }

@@ -22,3 +22,6 @@ export default abstract class LoopGridItem extends cc.Component {
     abstract runDeleteAnim(finishCallback: Function): void
     // update (dt) {}
 }
+
+
+//-150
