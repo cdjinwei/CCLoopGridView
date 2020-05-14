@@ -35,7 +35,7 @@ export default class NewClass extends cc.Component {
     // onLoad () {}
 
     start () {
-        let list = new Array(5);
+        let list = new Array(8);
         for(let i = 0; i < list.length; i++){
             list[i] = i;
         }

@@ -419,79 +419,8 @@ export default class LoopGridView extends cc.Component {
             });
         }
 
-        
-        // if (index < this.startIndex) {
-        //     for (let i = this.startIndex; i <= this.endIndex; i++) {
-        //         this.itemNodeList[i - 1] = this.itemNodeList[i];
-        //     }
-        //     delete this.itemNodeList[this.endIndex];
-        //     this.startIndex--;
-        //     this.endIndex--;
-        // } else if (index > this.endIndex) {
-
-        // } else {
-        //     this.itemNodeList[index].getComponent(LoopGridItem).runDeleteAnim(() => {
-        //         this.itemNodeList[index].destroy();
-        //         for (let i = index; i < this.endIndex; i++) {
-        //             this.itemNodeList[i] = this.itemNodeList[i + 1];
-        //         }
-        //         delete this.itemNodeList[this.endIndex];
-        //         this.fixItemNode();
-        //     });
-        // }
-
-        // //将item移动到对应位置
-        // for (let index in this.itemNodeList) {
-        //     let node: cc.Node = this.itemNodeList[index];
-        //     if (node == undefined) continue;
-        //     // cc.tween(node).to(0.15, { position: this.calcItemPosition(parseInt(index)) }).start();
-        //     let position = this.calcItemPosition(parseInt(index));
-        //     console.log(position.y);
-        //     node.position = position;
-        // }
-        // //修正content 位置
-        // this.fixContentPosition();
-    }
-
-    public deleteItemData(index: number = 0) {
-        if (index < 0 || index >= this.itemDataList.length) {
-            console.warn(`index: ${index} out of range!!!`);
-            return;
-        }
-        let deleteItem: cc.Node = this.itemNodeList[index];
-        this.itemDataList.splice(index, 1);
-        this.refreshContentSize();
-        if (deleteItem == undefined) {
-            return;
-        }
-        this.interactable = false;
-
-        let cmp: LoopGridItem = deleteItem.getComponent(LoopGridItem);
-
-        let onAnimFinished = () => {
-            this.interactable = true;
-            deleteItem.destroy();
-            delete this.itemNodeList[index];
-            for (let i = index + 1; i < this.itemDataList.length; i++) {
-                let item = this.itemNodeList[i];
-
-                if (item == undefined) break;
-                let newIndex = i - 1;
-                this.itemNodeList[newIndex] = item;
-                delete this.itemNodeList[i];
-                cc.tween(item).to(0.15, { position: this.calcItemPosition(newIndex) }).start();
-            }
-
-            this.fixItemNode();
-        }
-        cmp.runDeleteAnim(onAnimFinished);
-
-        //1.被删除的数据在可视区域'上方'
-        //1.1 将数据从itemDataList中删除
-        //1.2 更新content长度
-        //1.3 更新itemNode的位置
-        //2.被删除的数据在可视区域'中'
-        //3.被删除的数据在可视区域'下方'
+        //1.删除的是index==0节点，content长度改变，所有node位置改变
+        //2.
     }
 
     private fixItemNode() {
@@ -606,8 +535,12 @@ export default class LoopGridView extends cc.Component {
 
     private updateHorizontalContentPosition(delta: cc.Vec2) {
         let tempX = this.content.x + delta.x;
-        tempX = Math.min(tempX, this.rightLimit);
-        tempX = Math.max(tempX, this.leftLimit);
+        if(this.content.width < this.node.width){
+            tempX = this.directionHorizontal == DirectionHorizontal.LEFT_TO_RIGHT ? this.rightLimit : this.leftLimit;
+        }else{
+            tempX = Math.min(tempX, this.rightLimit);
+            tempX = Math.max(tempX, this.leftLimit);
+        }
 
         this.content.x = tempX;
     }
